@@ -1,7 +1,7 @@
-﻿// using System;
-// using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net;
-// using System.Threading.Tasks;
+using System.Threading.Tasks;
 using RestSharp;
 using Newtonsoft.Json;
 
@@ -27,7 +27,7 @@ class Program
         };
 
         var client = new RestClient(options);
-        var tasks = new List<Task>();
+        var tasks = new List<Task<Tuple<int, DateTime, DateTime, string>>>(); // 使用Tuple<int, string>来存储结果
 
         for (int i = 1; i <= 100; i++)
         {
@@ -36,21 +36,33 @@ class Program
         }
 
         await Task.WhenAll(tasks);
+
+        foreach (var result in tasks.Select(t => t.Result))
+        {
+            // 在字符串左边填充0，直至3位
+            string page = result.Item1.ToString().PadLeft(3, '0');
+            Console.WriteLine($"{page} - ReqT {result.Item2}\tResT {result.Item3}\tTraceId: {result.Item4}");
+        }
     }
 
-    static async Task ProcessPageAsync(RestClient client, int pageNumber)
+    static async Task<Tuple<int, DateTime, DateTime, string>> ProcessPageAsync(RestClient client, int pageNumber)
     {
-        var request = new RestRequest($"https://httpbin.org/get?page={pageNumber}");
+        DateTime request_time = DateTime.Now;
+        var request = new RestRequest($"https://httpbin.org/delay/3?page={pageNumber}");
         var resp_raw = await client.ExecuteAsync(request);
+        DateTime res_time = DateTime.Now;
         if (resp_raw.Content != null)
         {
             var response = JsonConvert.DeserializeObject<JsonResponse>(resp_raw.Content);
-            if (response != null && response.Headers != null)
-            {   
-                // return pageNumber,response.Headers.XAmznTraceId;
-                Console.Write("\t");
-                Console.Write($"Response from page {pageNumber} {DateTime.Now} - X-Amzn-Trace-Id: {response.Headers.XAmznTraceId}\n");
+            if (response != null && response.Headers != null && response.Headers.XAmznTraceId != null)
+            {
+                var TraceId = response.Headers.XAmznTraceId;
+                string xAmznTraceIdLast4 = TraceId.Substring(TraceId.Length - 4);
+                return Tuple.Create(pageNumber, request_time, res_time, xAmznTraceIdLast4);
             }
         }
+        // 如果没有有效的结果，返回一个占位符值
+        request_time = DateTime.Now;
+        return Tuple.Create(pageNumber, request_time, res_time, "N/A");
     }
 }

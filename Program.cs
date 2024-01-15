@@ -40,8 +40,9 @@ class Program
         var results = await Task.WhenAll(tasks);
 
         // 使用 LINQ 按 ReqT 时间排序
-        var sortedResults = results.OrderBy(result => result.Item2);
-
+        // var sortedResults = results.OrderBy(result => result.Item2);
+        // 使用 LINQ 按 TraceId 的第一个字符排序
+        var sortedResults = results.OrderBy(result => result.Item4 != null && result.Item4.Length > 0 ? result.Item4[0] : '\0');
         foreach (var result in sortedResults)
         {
             string page = result.Item1.ToString().PadLeft(3, '0');

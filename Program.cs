@@ -28,26 +28,30 @@ class Program
         };
 
         var client = new RestClient(options);
-        var tasks = new List<Task<Tuple<int, DateTime, DateTime, string>>>(); // 使用Tuple<int, string>来存储结果
+        var tasks = new List<Task>(); // 创建一个用于存储任务的列表
 
         for (int i = 1; i <= 100; i++)
         {
             int page = i;
-            tasks.Add(Task.Run(() => ProcessPageAsync(client, page)));
+            /*在 child_task => 这个表达式中，child_task 是一个 lambda 表达式的参数。
+              在 C# 中，lambda 表达式是一种简洁的方式来定义匿名函数。这个表达式通常用于创建简短的回调函数。
+              在您的代码中，child_task 代表的是由 ProcessPageAsync 方法返回的 Task 对象。
+              当您调用 ContinueWith 方法时，您正在告诉程序：“当这个任务完成后，执行这个 lambda 表达式。” 
+              这个 lambda 表达式接收一个 Task 参数（在这里我们命名为 child_task），
+              这个 Task 对象包含了 ProcessPageAsync 方法的返回值。
+            */
+            // 创建并存储任务
+            var task = ProcessPageAsync(client, page).ContinueWith(child_task =>
+            {
+                var result = child_task.Result;
+                string pageStr = result.Item1.ToString().PadLeft(3, '0');
+                Console.WriteLine($"{pageStr} - ReqT {result.Item2}\tResT {result.Item3}\tTraceId: {result.Item4}");
+            });
+            tasks.Add(task);
         }
 
-        // 收集所有结果
-        var results = await Task.WhenAll(tasks);
-
-        // 使用 LINQ 按 ReqT 时间排序
-        // var sortedResults = results.OrderBy(result => result.Item2);
-        // 使用 LINQ 按 TraceId 的第一个字符排序
-        var sortedResults = results.OrderBy(result => result.Item4 != null && result.Item4.Length > 0 ? result.Item4[0] : '\0');
-        foreach (var result in sortedResults)
-        {
-            string page = result.Item1.ToString().PadLeft(3, '0');
-            Console.WriteLine($"{page} - ReqT {result.Item2}\tResT {result.Item3}\tTraceId: {result.Item4}");
-        }
+        // 等待所有任务完成
+        await Task.WhenAll(tasks);
     }
 
     static async Task<Tuple<int, DateTime, DateTime, string>> ProcessPageAsync(RestClient client, int pageNumber)
@@ -71,3 +75,4 @@ class Program
         return Tuple.Create(pageNumber, request_time, res_time, "N/A");
     }
 }
+

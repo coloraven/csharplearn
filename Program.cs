@@ -4,6 +4,7 @@ using System.Net;
 using System.Threading.Tasks;
 using RestSharp;
 using Newtonsoft.Json;
+using System.Linq;
 
 public class JsonResponse
 {
@@ -35,11 +36,14 @@ class Program
             tasks.Add(Task.Run(() => ProcessPageAsync(client, page)));
         }
 
-        await Task.WhenAll(tasks);
+        // 收集所有结果
+        var results = await Task.WhenAll(tasks);
 
-        foreach (var result in tasks.Select(t => t.Result))
+        // 使用 LINQ 按 ReqT 时间排序
+        var sortedResults = results.OrderBy(result => result.Item2);
+
+        foreach (var result in sortedResults)
         {
-            // 在字符串左边填充0，直至3位
             string page = result.Item1.ToString().PadLeft(3, '0');
             Console.WriteLine($"{page} - ReqT {result.Item2}\tResT {result.Item3}\tTraceId: {result.Item4}");
         }
@@ -48,7 +52,7 @@ class Program
     static async Task<Tuple<int, DateTime, DateTime, string>> ProcessPageAsync(RestClient client, int pageNumber)
     {
         DateTime request_time = DateTime.Now;
-        var request = new RestRequest($"https://httpbin.org/delay/3?page={pageNumber}");
+        var request = new RestRequest($"https://httpbin.org/get?page={pageNumber}");
         var resp_raw = await client.ExecuteAsync(request);
         DateTime res_time = DateTime.Now;
         if (resp_raw.Content != null)

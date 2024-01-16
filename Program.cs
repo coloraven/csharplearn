@@ -1,10 +1,12 @@
 ﻿// using System;
+using System.Collections.Concurrent;
 // using System.Collections.Generic;
 using System.Net;
-// using System.Threading.Tasks;
+using System.Threading.Tasks;
 using RestSharp;
 using Newtonsoft.Json;
 // using System.Linq;
+
 
 public class JsonResponse
 {
@@ -28,9 +30,8 @@ class Program
         };
 
         var client = new RestClient(options);
-        var tasks = new List<Task>(); // 创建一个用于存储任务的列表
-
-        for (int i = 1; i <= 100; i++)
+        var tasks = new ConcurrentBag<Task<Tuple<int, DateTime, DateTime, string>>>(); // 创建一个用于存储任务的列表
+        Parallel.For(1, 101, (i) =>
         {
             int page = i;
             /*在 child_task => 这个表达式中，child_task 是一个 lambda 表达式的参数。
@@ -46,9 +47,10 @@ class Program
                 var result = child_task.Result;
                 string pageStr = result.Item1.ToString().PadLeft(3, '0');
                 Console.WriteLine($"{pageStr} - ReqT {result.Item2}\tResT {result.Item3}\tTraceId: {result.Item4}");
+                return result;
             });
             tasks.Add(task);
-        }
+        });
 
         // 等待所有任务完成
         await Task.WhenAll(tasks);
@@ -56,6 +58,15 @@ class Program
 
     static async Task<Tuple<int, DateTime, DateTime, string>> ProcessPageAsync(RestClient client, int pageNumber)
     {
+        // 模拟CPU密集型操作，例如计算斐波那契数列
+        long Fibonacci(int n)
+        {
+            if (n <= 1) return n;
+            return Fibonacci(n - 1) + Fibonacci(n - 2);
+        }
+
+        // 计算一个较大的斐波那契数
+        var fibResult = Fibonacci(40); // 这个值可以根据需要调整
         DateTime request_time = DateTime.Now;
         var request = new RestRequest($"https://httpbin.org/get?page={pageNumber}");
         var resp_raw = await client.ExecuteAsync(request);
@@ -70,6 +81,7 @@ class Program
                 return Tuple.Create(pageNumber, request_time, res_time, xAmznTraceIdLast4);
             }
         }
+
         // 如果没有有效的结果，返回一个占位符值
         request_time = DateTime.Now;
         return Tuple.Create(pageNumber, request_time, res_time, "N/A");

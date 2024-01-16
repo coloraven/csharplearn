@@ -58,15 +58,6 @@ class Program
 
     static async Task<Tuple<int, DateTime, DateTime, string>> ProcessPageAsync(RestClient client, int pageNumber)
     {
-        // 模拟CPU密集型操作，例如计算斐波那契数列
-        long Fibonacci(int n)
-        {
-            if (n <= 1) return n;
-            return Fibonacci(n - 1) + Fibonacci(n - 2);
-        }
-
-        // 计算一个较大的斐波那契数
-        var fibResult = Fibonacci(40); // 这个值可以根据需要调整
         DateTime request_time = DateTime.Now;
         var request = new RestRequest($"https://httpbin.org/get?page={pageNumber}");
         var resp_raw = await client.ExecuteAsync(request);

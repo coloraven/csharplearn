@@ -62,11 +62,11 @@
             // 
             labelPageNum.Anchor = AnchorStyles.Bottom;
             labelPageNum.AutoSize = true;
-            labelPageNum.Location = new Point(671, 978);
+            labelPageNum.Location = new Point(565, 978);
             labelPageNum.Name = "labelPageNum";
-            labelPageNum.Size = new Size(43, 35);
+            labelPageNum.Size = new Size(176, 35);
             labelPageNum.TabIndex = 2;
-            labelPageNum.Text = " / ";
+            labelPageNum.Text = ".......................";
             // 
             // showcsvDGV
             // 
